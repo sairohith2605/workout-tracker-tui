@@ -1,5 +1,8 @@
 use crate::error::Result;
-use crate::models::{Category, CategoryId, EntryId, Exercise, ExerciseId, SessionId, SetId};
+use crate::models::{
+    Category, CategoryId, EntryId, Exercise, ExerciseId, HistoryEntry, HistorySet,
+    HistorySummary, SessionId, SetId,
+};
 use rusqlite::Connection;
 
 pub fn list_categories(conn: &Connection) -> Result<Vec<Category>> {
@@ -122,4 +125,75 @@ pub fn insert_set(
         ],
     )?;
     Ok(id)
+}
+
+/// Returns one summary row per unique date in reverse-chronological order.
+/// If the user logged multiple sessions on the same day they are merged here,
+/// with `exercise_count` reflecting the total across all sessions that day.
+pub fn list_sessions(conn: &Connection) -> Result<Vec<HistorySummary>> {
+    let mut stmt = conn.prepare(
+        "SELECT ws.date, COUNT(we.id) AS exercise_count
+         FROM workout_sessions ws
+         LEFT JOIN workout_entries we ON we.session_id = ws.id
+         GROUP BY ws.date
+         ORDER BY ws.date DESC",
+    )?;
+    let sessions = stmt
+        .query_map([], |row| {
+            let date: String = row.get(0)?;
+            let count: i64 = row.get(1)?;
+            Ok((date, count))
+        })?
+        .filter_map(std::result::Result::ok)
+        .map(|(date, count)| HistorySummary {
+            date,
+            exercise_count: usize::try_from(count).unwrap_or(0),
+        })
+        .collect();
+    Ok(sessions)
+}
+
+/// Returns every exercise + set logged on `date` (across all sessions that day),
+/// grouped by exercise in recorded order.
+pub fn get_day_detail(conn: &Connection, date: &str) -> Result<Vec<HistoryEntry>> {
+    let mut stmt = conn.prepare(
+        "SELECT e.name, c.name, s.set_number, s.reps, s.weight
+         FROM workout_sessions ws
+         JOIN workout_entries we ON we.session_id = ws.id
+         JOIN exercises e        ON e.id  = we.exercise_id
+         JOIN categories c       ON c.id  = e.category_id
+         JOIN sets s             ON s.entry_id = we.id
+         WHERE ws.date = ?1
+         ORDER BY ws.rowid, we.sort_order, s.set_number",
+    )?;
+    let rows: Vec<(String, String, i64, i64, f64)> = stmt
+        .query_map(rusqlite::params![date], |row| {
+            Ok((
+                row.get::<_, String>(0)?,
+                row.get::<_, String>(1)?,
+                row.get::<_, i64>(2)?,
+                row.get::<_, i64>(3)?,
+                row.get::<_, f64>(4)?,
+            ))
+        })?
+        .filter_map(std::result::Result::ok)
+        .collect();
+
+    let mut entries: Vec<HistoryEntry> = Vec::new();
+    for (ex_name, cat_name, set_number, reps, weight) in rows {
+        let set = HistorySet {
+            set_number: usize::try_from(set_number).unwrap_or(0),
+            reps: u32::try_from(reps).unwrap_or(0),
+            weight,
+        };
+        match entries.last_mut() {
+            Some(last) if last.exercise_name == ex_name => last.sets.push(set),
+            _ => entries.push(HistoryEntry {
+                exercise_name: ex_name,
+                category_name: cat_name,
+                sets: vec![set],
+            }),
+        }
+    }
+    Ok(entries)
 }

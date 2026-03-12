@@ -138,6 +138,7 @@ All navigation is keyboard-only.
 |---|---|
 | `l` | Log a workout |
 | `c` | Manage the exercise catalog |
+| `h` | Browse workout history |
 | `q` | Quit |
 
 #### Workout Date
@@ -179,6 +180,22 @@ Exercises already added in this session are marked `✓`.
 |---|---|
 | `s` | Save the session to the database |
 | `Esc` | Back to Exercise Picker to add more exercises |
+
+#### History List
+
+| Key | Action |
+|---|---|
+| `↑` `↓` | Navigate sessions |
+| `Enter` | View full detail for selected session |
+| `f` | Open date-jump input (type a date to scroll to it) |
+| `Esc` | Back to Main Menu |
+
+#### History Detail
+
+| Key | Action |
+|---|---|
+| `↑` `↓` | Scroll through exercises and sets |
+| `Esc` | Back to History List |
 
 ### Data Storage
 

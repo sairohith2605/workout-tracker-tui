@@ -1,4 +1,5 @@
 pub mod catalog;
+pub mod history;
 pub mod workout;
 
 use crate::app::{App, Screen};
@@ -18,6 +19,8 @@ pub fn render(frame: &mut Frame, app: &App) {
         Screen::ExercisePicker => workout::render_picker(frame, app),
         Screen::SetLogger => workout::render_set_logger(frame, app),
         Screen::WorkoutSummary => workout::render_summary(frame, app),
+        Screen::HistoryList => history::render_history_list(frame, app),
+        Screen::HistoryDetail => history::render_history_detail(frame, app),
     }
 }
 
@@ -36,13 +39,13 @@ fn render_main_menu(frame: &mut Frame, app: &App) {
         .direction(Direction::Vertical)
         .constraints([
             Constraint::Fill(1),
-            Constraint::Length(3),
+            Constraint::Length(4),
             Constraint::Fill(1),
             Constraint::Length(1),
         ])
         .split(inner);
 
-    let menu = Paragraph::new("[l]  Log Workout\n[c]  Manage Catalog\n[q]  Quit")
+    let menu = Paragraph::new("[l]  Log Workout\n[c]  Manage Catalog\n[h]  History\n[q]  Quit")
         .alignment(Alignment::Center)
         .style(Style::default().fg(Color::White));
     frame.render_widget(menu, chunks[1]);
