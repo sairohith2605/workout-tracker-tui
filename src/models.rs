@@ -65,3 +65,27 @@ pub struct SessionExercise {
     pub exercise: Exercise,
     pub sets: Vec<SetInput>,
 }
+
+/// A past workout day shown in the history list.
+/// Multiple sessions logged on the same date are merged into one entry.
+#[derive(Debug, Clone)]
+pub struct HistorySummary {
+    pub date: String,
+    pub exercise_count: usize,
+}
+
+/// One set within a history entry.
+#[derive(Debug, Clone)]
+pub struct HistorySet {
+    pub set_number: usize,
+    pub reps: u32,
+    pub weight: f64,
+}
+
+/// One exercise (with its sets) within a past workout session.
+#[derive(Debug, Clone)]
+pub struct HistoryEntry {
+    pub exercise_name: String,
+    pub category_name: String,
+    pub sets: Vec<HistorySet>,
+}

@@ -1,6 +1,6 @@
 use crate::db::queries;
 use crate::error::Result;
-use crate::models::{Category, Exercise, SessionExercise, SetInput};
+use crate::models::{Category, Exercise, HistoryEntry, HistorySummary, SessionExercise, SetInput};
 use chrono::Local;
 use rusqlite::Connection;
 
@@ -13,6 +13,8 @@ pub enum Screen {
     ExercisePicker,
     SetLogger,
     WorkoutSummary,
+    HistoryList,
+    HistoryDetail,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -59,6 +61,14 @@ pub struct App {
     pub set_weight_input: String,
     pub set_focus: SetField,
 
+    // --- History ---
+    pub history_sessions: Vec<HistorySummary>,
+    pub history_selected: usize,
+    pub history_detail: Vec<HistoryEntry>,
+    pub history_detail_scroll: usize,
+    pub history_filter_input: String,
+    pub history_filtering: bool,
+
     // --- Status bar ---
     pub status_msg: Option<String>,
 }
@@ -95,6 +105,12 @@ impl App {
             set_reps_input: String::new(),
             set_weight_input: String::new(),
             set_focus: SetField::Reps,
+            history_sessions: Vec::new(),
+            history_selected: 0,
+            history_detail: Vec::new(),
+            history_detail_scroll: 0,
+            history_filter_input: String::new(),
+            history_filtering: false,
             status_msg: None,
         })
     }

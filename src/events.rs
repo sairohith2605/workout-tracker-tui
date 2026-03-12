@@ -21,6 +21,8 @@ pub fn handle_key(app: &mut App, key: KeyEvent) -> Result<()> {
         Screen::ExercisePicker => handle_exercise_picker(app, key),
         Screen::SetLogger => handle_set_logger(app, key),
         Screen::WorkoutSummary => handle_workout_summary(app, key)?,
+        Screen::HistoryList => handle_history_list(app, key),
+        Screen::HistoryDetail => handle_history_detail(app, key),
     }
     Ok(())
 }
@@ -180,6 +182,18 @@ fn handle_main_menu(app: &mut App, key: KeyEvent) {
             app.catalog_filter_idx = None;
             app.delete_confirm = false;
             app.screen = Screen::CatalogList;
+        }
+        KeyCode::Char('h') => {
+            match queries::list_sessions(&app.db) {
+                Ok(sessions) => {
+                    app.history_sessions = sessions;
+                    app.history_selected = 0;
+                    app.history_filtering = false;
+                    app.history_filter_input.clear();
+                    app.screen = Screen::HistoryList;
+                }
+                Err(e) => app.status_msg = Some(format!("Error loading history: {e}")),
+            }
         }
         KeyCode::Char('q') => app.should_quit = true,
         _ => {}
@@ -374,6 +388,110 @@ fn save_workout(app: &mut App) -> Result<()> {
     ));
     app.screen = Screen::MainMenu;
     Ok(())
+}
+
+// ---------------------------------------------------------------------------
+// HistoryList
+// ---------------------------------------------------------------------------
+
+fn handle_history_list(app: &mut App, key: KeyEvent) {
+    // When the date-jump input is open, all keys go to that sub-mode first.
+    if app.history_filtering {
+        match key.code {
+            KeyCode::Char('f') | KeyCode::Esc => {
+                app.history_filtering = false;
+                app.history_filter_input.clear();
+            }
+            KeyCode::Enter => {
+                if chrono::NaiveDate::parse_from_str(&app.history_filter_input, "%Y-%m-%d")
+                    .is_err()
+                {
+                    app.status_msg =
+                        Some("Invalid date — use YYYY-MM-DD format".to_string());
+                } else {
+                    // Jump to the most-recent session on or before the entered date.
+                    // history_sessions is in DESC order so the first entry whose date
+                    // is ≤ the filter is the closest one.
+                    let target = app.history_filter_input.as_str();
+                    let jump_idx = app
+                        .history_sessions
+                        .iter()
+                        .position(|s| s.date.as_str() <= target)
+                        .unwrap_or_else(|| app.history_sessions.len().saturating_sub(1));
+                    app.history_selected = jump_idx;
+                    app.history_filtering = false;
+                    app.history_filter_input.clear();
+                }
+            }
+            KeyCode::Backspace => {
+                app.history_filter_input.pop();
+            }
+            KeyCode::Char(c) => {
+                if app.history_filter_input.len() < 10 {
+                    app.history_filter_input.push(c);
+                }
+            }
+            _ => {}
+        }
+        return;
+    }
+
+    match key.code {
+        KeyCode::Esc => app.screen = Screen::MainMenu,
+        KeyCode::Char('f') => {
+            app.history_filtering = true;
+            app.history_filter_input.clear();
+        }
+        KeyCode::Up => {
+            if app.history_selected > 0 {
+                app.history_selected -= 1;
+            }
+        }
+        KeyCode::Down => {
+            if !app.history_sessions.is_empty()
+                && app.history_selected + 1 < app.history_sessions.len()
+            {
+                app.history_selected += 1;
+            }
+        }
+        KeyCode::Enter => {
+            if let Some(session) = app.history_sessions.get(app.history_selected) {
+                let date = session.date.clone();
+                match queries::get_day_detail(&app.db, &date) {
+                    Ok(detail) => {
+                        app.history_detail = detail;
+                        app.history_detail_scroll = 0;
+                        app.screen = Screen::HistoryDetail;
+                    }
+                    Err(e) => app.status_msg = Some(format!("Error loading session: {e}")),
+                }
+            }
+        }
+        _ => {}
+    }
+}
+
+// ---------------------------------------------------------------------------
+// HistoryDetail
+// ---------------------------------------------------------------------------
+
+fn handle_history_detail(app: &mut App, key: KeyEvent) {
+    match key.code {
+        KeyCode::Esc => app.screen = Screen::HistoryList,
+        KeyCode::Up => {
+            app.history_detail_scroll = app.history_detail_scroll.saturating_sub(1);
+        }
+        KeyCode::Down => {
+            // Each entry occupies: 1 header line + N set lines + 1 blank line.
+            let total_lines: usize =
+                app.history_detail.iter().map(|e| 2 + e.sets.len()).sum();
+            let max_scroll = total_lines.saturating_sub(1);
+            if app.history_detail_scroll < max_scroll {
+                app.history_detail_scroll += 1;
+            }
+        }
+        _ => {}
+    }
 }
 
 // ---------------------------------------------------------------------------
