@@ -78,15 +78,33 @@ Once the catalog has at least one exercise, the **Main Menu** is shown on all su
 
 ### Screen Flow
 
-```
-[First run]  Catalog ──────────────────────────────────────────────────────────┐
-                                                                                │
-             Main Menu ──► Workout Date ──► Exercise Picker ──► Set Logger     │
-                 ▲                               │                   │          │
-                 │                               ▼                   ▼          │
-                 └──────────────── Save ◄── Workout Summary ◄── (loop back)    │
-                                                                                │
-             Main Menu ◄───────────────────────────────────────────────────────┘
+```mermaid
+sequenceDiagram
+    participant App Start
+    participant Catalog
+    participant Main Menu
+    participant Workout Date
+    participant Exercise Picker
+    participant Set Logger
+    participant Workout Summary
+
+    alt first run
+        App Start->>Catalog: open (catalog empty)
+        Catalog->>Main Menu: exercise added
+    else returning user
+        App Start->>Main Menu: open
+    end
+
+    Main Menu->>Workout Date: log workout
+    Workout Date->>Exercise Picker: date confirmed
+
+    loop for each exercise
+        Exercise Picker->>Set Logger: exercise selected
+        Set Logger->>Exercise Picker: sets recorded
+    end
+
+    Exercise Picker->>Workout Summary: done picking
+    Workout Summary->>Main Menu: workout saved
 ```
 
 ### Keyboard Shortcuts
