@@ -1,10 +1,10 @@
-# Fitness Tracker
+# Workout Tracker
 
 A keyboard-driven terminal application for logging workouts — built with Rust and a local SQLite database. No accounts, no cloud, no internet connection required.
 
 ## Overview
 
-Fitness Tracker lets you maintain a personal catalog of exercises organised by muscle group, then log daily workouts by selecting exercises from that catalog and recording each set with its rep count and weight.
+Workout Tracker lets you maintain a personal catalog of exercises organised by muscle group, then log daily workouts by selecting exercises from that catalog and recording each set with its rep count and weight.
 
 All data is stored locally in a single SQLite file on your machine. The application runs entirely inside your terminal — no GUI, no browser.
 
